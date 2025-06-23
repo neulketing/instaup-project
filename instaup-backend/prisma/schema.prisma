@@ -372,3 +372,31 @@ model AdminLog {
 
   @@map("admin_logs")
 }
+
+model Product {
+  id           String   @id @default(cuid())
+  platform     String
+  category     String
+  name         String
+  description  String   @db.Text
+  price        Float
+  originalPrice Float?
+  discount     Float?
+  minOrder     Int
+  maxOrder     Int
+  deliveryTime String
+  quality      String   @default("standard")
+  isActive     Boolean  @default(true)
+  isPopular    Boolean  @default(false)
+  isRecommended Boolean @default(false)
+  totalOrders  Int      @default(0)
+  totalRevenue Float    @default(0)
+  features     Json     @default("[]")
+  warningNote  String?  @db.Text
+  icon         String?  // 서비스 아이콘 (이모지)
+  unit         String   @default("개") // 단위 (개, 회, 명 등)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("products")
+}

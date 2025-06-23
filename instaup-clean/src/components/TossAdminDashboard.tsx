@@ -608,10 +608,494 @@ const OrderManagement: React.FC = () => {
   );
 };
 
-// 메인 대시보드 컴포넌트
+// 플랫폼 데이터 타입 추가
+interface Platform {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  isActive: boolean;
+  isVisible: boolean;
+  sortOrder: number;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 플랫폼 API 서비스 추가
+class PlatformAPI {
+  private static baseURL =
+    import.meta.env.VITE_BACKEND_API_URL ||
+    "https://instaup-production.up.railway.app";
+
+  static async getPlatforms() {
+    const response = await fetch(`${this.baseURL}/api/admin/platforms`);
+    return response.json();
+  }
+
+  static async createPlatform(platform: Partial<Platform>) {
+    const response = await fetch(`${this.baseURL}/api/admin/platforms`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(platform),
+    });
+    return response.json();
+  }
+
+  static async updatePlatform(id: string, platform: Partial<Platform>) {
+    const response = await fetch(`${this.baseURL}/api/admin/platforms/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(platform),
+    });
+    return response.json();
+  }
+
+  static async deletePlatform(id: string) {
+    const response = await fetch(`${this.baseURL}/api/admin/platforms/${id}`, {
+      method: "DELETE",
+    });
+    return response.json();
+  }
+}
+
+// 플랫폼 관리 컴포넌트 추가
+const PlatformManagement: React.FC = () => {
+  const [platforms, setPlatforms] = useState<Platform[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null);
+  const [formData, setFormData] = useState<Partial<Platform>>({});
+
+  useEffect(() => {
+    loadPlatforms();
+  }, []);
+
+  const loadPlatforms = async () => {
+    try {
+      setLoading(true);
+      const response = await PlatformAPI.getPlatforms();
+      if (response.success) {
+        setPlatforms(response.data);
+      }
+    } catch (error) {
+      console.error("플랫폼 로드 실패:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (platform: Platform) => {
+    setEditingPlatform(platform);
+    setFormData(platform);
+    setIsModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setEditingPlatform(null);
+    setFormData({
+      name: "",
+      icon: "📱",
+      color: "#3182F6",
+      isActive: true,
+      isVisible: true,
+      sortOrder: platforms.length + 1,
+      description: "",
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!formData.name || !formData.description) {
+      alert("플랫폼명과 설명을 입력해주세요.");
+      return;
+    }
+
+    try {
+      let response;
+      if (editingPlatform) {
+        response = await PlatformAPI.updatePlatform(
+          editingPlatform.id,
+          formData,
+        );
+      } else {
+        response = await PlatformAPI.createPlatform({
+          ...formData,
+          id:
+            formData.name?.toLowerCase().replace(/\s+/g, "_") ||
+            `platform_${Date.now()}`,
+        });
+      }
+
+      if (response.success) {
+        setIsModalOpen(false);
+        setEditingPlatform(null);
+        setFormData({});
+        loadPlatforms();
+      }
+    } catch (error) {
+      console.error("플랫폼 저장 실패:", error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (confirm("정말 이 플랫폼을 삭제하시겠습니까?")) {
+      try {
+        const response = await PlatformAPI.deletePlatform(id);
+        if (response.success) {
+          loadPlatforms();
+        }
+      } catch (error) {
+        console.error("플랫폼 삭제 실패:", error);
+      }
+    }
+  };
+
+  const handleToggleActive = async (id: string, isActive: boolean) => {
+    try {
+      const response = await PlatformAPI.updatePlatform(id, { isActive });
+      if (response.success) {
+        loadPlatforms();
+      }
+    } catch (error) {
+      console.error("플랫폼 상태 변경 실패:", error);
+    }
+  };
+
+  const handleToggleVisible = async (id: string, isVisible: boolean) => {
+    try {
+      const response = await PlatformAPI.updatePlatform(id, { isVisible });
+      if (response.success) {
+        loadPlatforms();
+      }
+    } catch (error) {
+      console.error("플랫폼 표시 상태 변경 실패:", error);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-[#191F28] mb-2">
+            🏗️ 플랫폼 관리
+          </h2>
+          <p className="text-[#6B7684]">
+            서비스 플랫폼을 관리하고 고객에게 노출될 서비스를 설정하세요
+          </p>
+        </div>
+        <TossButton variant="primary" onClick={handleAddNew} icon="+">
+          새 플랫폼 추가
+        </TossButton>
+      </div>
+
+      {/* 통계 */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <TossCard className="p-6">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-[#191F28] mb-1">
+              {platforms.length}
+            </div>
+            <div className="text-[#6B7684] text-sm">전체 플랫폼</div>
+          </div>
+        </TossCard>
+        <TossCard className="p-6">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-[#00C73C] mb-1">
+              {platforms.filter((p) => p.isActive).length}
+            </div>
+            <div className="text-[#6B7684] text-sm">활성 플랫폼</div>
+          </div>
+        </TossCard>
+        <TossCard className="p-6">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-[#3182F6] mb-1">
+              {platforms.filter((p) => p.isVisible).length}
+            </div>
+            <div className="text-[#6B7684] text-sm">공개 플랫폼</div>
+          </div>
+        </TossCard>
+        <TossCard className="p-6">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-[#FFB800] mb-1">
+              {platforms.filter((p) => !p.isActive).length}
+            </div>
+            <div className="text-[#6B7684] text-sm">비활성 플랫폼</div>
+          </div>
+        </TossCard>
+      </div>
+
+      {/* 플랫폼 목록 */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin w-6 h-6 border-4 border-[#3182F6] border-t-transparent rounded-full"></div>
+          <span className="ml-3 text-[#6B7684]">로딩 중...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {platforms
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((platform) => (
+              <TossCard key={platform.id} hoverable className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-xl"
+                      style={{ backgroundColor: `${platform.color}15` }}
+                    >
+                      {platform.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-[#191F28] text-lg">
+                        {platform.name}
+                      </h3>
+                      <p className="text-[#6B7684] text-sm">
+                        {platform.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    {/* 활성화 토글 */}
+                    <button
+                      onClick={() =>
+                        handleToggleActive(platform.id, !platform.isActive)
+                      }
+                      className={`w-12 h-6 rounded-full transition-all duration-200 relative ${
+                        platform.isActive ? "bg-[#00C73C]" : "bg-gray-300"
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-200 ${
+                          platform.isActive ? "left-6" : "left-0.5"
+                        }`}
+                      />
+                    </button>
+                    <span className="text-xs text-center text-[#6B7684]">
+                      {platform.isActive ? "활성" : "비활성"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {/* 표시 상태 */}
+                  <div className="flex items-center justify-between p-3 bg-[#F9FAFB] rounded-xl">
+                    <span className="text-sm font-medium text-[#191F28]">
+                      고객에게 표시
+                    </span>
+                    <button
+                      onClick={() =>
+                        handleToggleVisible(platform.id, !platform.isVisible)
+                      }
+                      className={`w-10 h-5 rounded-full transition-all duration-200 relative ${
+                        platform.isVisible ? "bg-[#3182F6]" : "bg-gray-300"
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all duration-200 ${
+                          platform.isVisible ? "left-5" : "left-0.5"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* 정렬 순서 */}
+                  <div className="flex items-center justify-between p-3 bg-[#F9FAFB] rounded-xl">
+                    <span className="text-sm font-medium text-[#191F28]">
+                      정렬 순서
+                    </span>
+                    <span className="text-sm font-bold text-[#191F28]">
+                      {platform.sortOrder}
+                    </span>
+                  </div>
+
+                  {/* 상태 배지 */}
+                  <div className="flex gap-2">
+                    {platform.isActive && (
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-md">
+                        활성
+                      </span>
+                    )}
+                    {platform.isVisible && (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-md">
+                        공개
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 액션 버튼 */}
+                  <div className="flex gap-2 pt-3">
+                    <TossButton
+                      variant="primary"
+                      size="small"
+                      onClick={() => handleEdit(platform)}
+                      icon="✏️"
+                    >
+                      수정
+                    </TossButton>
+                    <TossButton
+                      variant="error"
+                      size="small"
+                      onClick={() => handleDelete(platform.id)}
+                      icon="🗑️"
+                    >
+                      삭제
+                    </TossButton>
+                  </div>
+                </div>
+              </TossCard>
+            ))}
+        </div>
+      )}
+
+      {/* 편집 모달 */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-[#E5E8EB]">
+              <h3 className="text-xl font-bold text-[#191F28]">
+                {editingPlatform ? "플랫폼 수정" : "새 플랫폼 추가"}
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#191F28] mb-2">
+                  플랫폼명
+                </label>
+                <input
+                  type="text"
+                  value={formData.name || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border border-[#E5E8EB] rounded-xl focus:ring-2 focus:ring-[#3182F6] focus:border-transparent"
+                  placeholder="예: 인스타그램"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#191F28] mb-2">
+                  아이콘 (이모지)
+                </label>
+                <input
+                  type="text"
+                  value={formData.icon || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, icon: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border border-[#E5E8EB] rounded-xl focus:ring-2 focus:ring-[#3182F6] focus:border-transparent"
+                  placeholder="📷"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#191F28] mb-2">
+                  브랜드 색상
+                </label>
+                <input
+                  type="color"
+                  value={formData.color || "#3182F6"}
+                  onChange={(e) =>
+                    setFormData({ ...formData, color: e.target.value })
+                  }
+                  className="w-full h-12 border border-[#E5E8EB] rounded-xl focus:ring-2 focus:ring-[#3182F6] focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#191F28] mb-2">
+                  설명
+                </label>
+                <textarea
+                  value={formData.description || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  rows={3}
+                  className="w-full px-4 py-3 border border-[#E5E8EB] rounded-xl focus:ring-2 focus:ring-[#3182F6] focus:border-transparent resize-none"
+                  placeholder="플랫폼 설명을 입력하세요"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#191F28] mb-2">
+                  정렬 순서
+                </label>
+                <input
+                  type="number"
+                  value={formData.sortOrder || 1}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      sortOrder: Number(e.target.value),
+                    })
+                  }
+                  className="w-full px-4 py-3 border border-[#E5E8EB] rounded-xl focus:ring-2 focus:ring-[#3182F6] focus:border-transparent"
+                  min="1"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isActive || false}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isActive: e.target.checked })
+                    }
+                    className="w-5 h-5 text-[#3182F6] border-2 border-gray-300 rounded focus:ring-[#3182F6]"
+                  />
+                  <span className="text-sm font-medium text-[#191F28]">
+                    활성화
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isVisible || false}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isVisible: e.target.checked })
+                    }
+                    className="w-5 h-5 text-[#3182F6] border-2 border-gray-300 rounded focus:ring-[#3182F6]"
+                  />
+                  <span className="text-sm font-medium text-[#191F28]">
+                    고객에게 표시
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t border-[#E5E8EB]">
+              <TossButton
+                variant="secondary"
+                onClick={() => setIsModalOpen(false)}
+              >
+                취소
+              </TossButton>
+              <TossButton variant="primary" onClick={handleSave}>
+                저장
+              </TossButton>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// 메인 대시보드 컴포넌트 수정
 export default function TossAdminDashboard() {
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "products" | "orders"
+    "dashboard" | "platforms" | "products" | "orders"
   >("dashboard");
   const [dashboardData, setDashboardData] = useState<DashboardMetrics | null>(
     null,
@@ -640,6 +1124,7 @@ export default function TossAdminDashboard() {
 
   const tabs = [
     { id: "dashboard", name: "대시보드", icon: "📊" },
+    { id: "platforms", name: "플랫폼 관리", icon: "🏗️" },
     { id: "products", name: "상품 관리", icon: "📦" },
     { id: "orders", name: "주문 관리", icon: "🛒" },
   ];
@@ -770,6 +1255,7 @@ export default function TossAdminDashboard() {
           </div>
         )}
 
+        {activeTab === "platforms" && <PlatformManagement />}
         {activeTab === "products" && <TossProductManagement />}
         {activeTab === "orders" && <OrderManagement />}
       </div>

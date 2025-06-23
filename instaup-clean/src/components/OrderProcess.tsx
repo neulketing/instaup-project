@@ -14,6 +14,55 @@ interface OrderProcessProps {
   }) => void;
 }
 
+// API 서비스 클래스 추가
+class ProductAPI {
+  private static baseURL =
+    import.meta.env.VITE_BACKEND_API_URL ||
+    "https://instaup-production.up.railway.app";
+
+  static async getProducts(filters?: {
+    category?: string;
+    platform?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+    isActive?: boolean;
+  }) {
+    const params = new URLSearchParams();
+    if (filters?.category) params.append("category", filters.category);
+    if (filters?.platform) params.append("platform", filters.platform);
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.limit) params.append("limit", filters.limit.toString());
+    if (filters?.isActive !== undefined)
+      params.append("isActive", filters.isActive.toString());
+
+    const response = await fetch(
+      `${this.baseURL}/api/admin/products?${params}`,
+    );
+    return response.json();
+  }
+}
+
+// 백엔드 Product 타입을 ServiceItem으로 변환하는 함수
+const convertProductToServiceItem = (product: any): ServiceItem => {
+  return {
+    id: product.id,
+    platform: product.platform as Platform,
+    category: product.category,
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    minOrder: product.minOrder,
+    maxOrder: product.maxOrder,
+    deliveryTime: product.deliveryTime,
+    quality: product.quality,
+    unit: product.unit || "개",
+    isPopular: product.isPopular,
+    features: product.features || [],
+  };
+};
+
 export default function OrderProcess({
   userSession,
   onAuth,
@@ -34,708 +83,38 @@ export default function OrderProcess({
   const [quantity, setQuantity] = useState(100);
   const [isLoading, setIsLoading] = useState(false);
 
-  // SNS샵과 동일한 전체 서비스 데이터
-  const allServices: ServiceItem[] = [
-    // ===== 인스타그램 서비스 =====
-    // 팔로워 서비스들
-    {
-      id: "instagram_21",
-      platform: "instagram" as Platform,
-      category: "followers" as any,
-      name: "인스타 실제 한국 팔로워",
-      description: `📣 서비스 특징
-100% 실제 활동하는 한국인 유저들이 인스타 공식앱을 통해 직접 방문하여 팔로우를 눌러드리는 방식으로 안전하게 진행됩니다.
-실제 한국인 서비스는 계정활성화나 계정홍보를 원하시는 분들에게 효과적인 서비스입니다.
+  // 백엔드에서 가져온 서비스 데이터
+  const [allServices, setAllServices] = useState<ServiceItem[]>([]);
+  const [servicesLoading, setServicesLoading] = useState(true);
 
-🔄 30일 AS 보장
-주문내역에서 '리필'버튼을 눌러 직접 AS 가능합니다.
+  // 서비스 데이터 로드
+  const loadServices = async () => {
+    try {
+      setServicesLoading(true);
+      const response = await ProductAPI.getProducts({
+        isActive: true, // 활성화된 상품만 가져오기
+        limit: 1000, // 충분한 수량
+      });
 
-🌟 작업속도
-주문 후 1~6시간 내에 시작됩니다.
-'주문내역'메뉴에서 진행 현황을 직접 확인할 수 있습니다.
+      if (response.success && response.data.products) {
+        const serviceItems = response.data.products.map(
+          convertProductToServiceItem,
+        );
+        setAllServices(serviceItems);
+      }
+    } catch (error) {
+      console.error("서비스 데이터 로드 실패:", error);
+      // 오류 시 빈 배열 설정
+      setAllServices([]);
+    } finally {
+      setServicesLoading(false);
+    }
+  };
 
-⌨ 주문방법
-1. 인스타 프로필 화면에서 '사용자 이름' 복사
-2. 링크 입력창에 인스타그램 아이디(@사용자이름) 입력 후 주문
-
-❗ 확인해 주세요
-- 주문 전 공개 상태인지 확인해 주세요.(비공개로 주문 X)
-- 작업 진행 중 아이디 변경 및 비공개 전환 X`,
-      price: 180,
-      minOrder: 20,
-      maxOrder: 3000000,
-      deliveryTime: "1~6시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: true,
-      features: ["실제 한국인", "30일 AS", "안전한 방식", "프리미엄 품질"],
-    },
-    {
-      id: "instagram_577",
-      platform: "instagram" as Platform,
-      category: "followers" as any,
-      name: "인스타 한국인 팔로워",
-      description: `📣 서비스 특징
-대량 구매에 최적화된 한국인 팔로워 서비스입니다.
-실제 활동하는 한국인 유저들의 자연스러운 팔로우로 진행됩니다.
-
-🔄 30일 AS 보장
-주문내역에서 '리필'버튼을 눌러 직접 AS 가능합니다.
-
-🌟 작업속도
-주문 후 1~6시간 내에 시작됩니다.
-
-⌨ 주문방법
-1. 인스타 프로필 화면에서 '사용자 이름' 복사
-2. 링크 입력창에 인스타그램 아이디(@사용자이름) 입력 후 주문
-
-❗ 확인해 주세요
-- 주문 전 공개 상태인지 확인해 주세요.(비공개로 주문 X)
-- 작업 진행 중 아이디 변경 및 비공개 전환 X`,
-      price: 150,
-      minOrder: 50,
-      maxOrder: 1000000,
-      deliveryTime: "1~6시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["실제 한국인", "30일 AS", "대량구매", "빠른 시작"],
-    },
-
-    // 좋아요 서비스들
-    {
-      id: "instagram_56",
-      platform: "instagram" as Platform,
-      category: "likes" as any,
-      name: "인스타 좋아요",
-      description: `📣 서비스 특징
-인스타그램 게시물의 좋아요를 자연스럽게 증가시켜드립니다.
-실제 활동하는 계정들이 좋아요를 눌러드리는 방식으로 안전하게 진행됩니다.
-
-🔄 30일 AS 보장
-주문내역에서 '리필'버튼을 눌러 직접 AS 가능합니다.
-
-🌟 작업속도
-주문 후 1~30분 내에 시작됩니다.
-'주문내역'메뉴에서 진행 현황을 직접 확인할 수 있습니다.
-
-⌨ 주문방법
-1. 인스타 게시물 링크를 복사하세요
-2. 예시) https://www.instagram.com/p/xxxxxxxxxxx/
-3. 링크 입력창에 게시물 URL 입력 후 주문
-
-❗ 확인해 주세요
-- 주문 전 공개 상태인지 확인해 주세요.(비공개로 주문 X)
-- 작업 진행 중 게시물 삭제 X`,
-      price: 15,
-      minOrder: 10,
-      maxOrder: 50000,
-      deliveryTime: "1~30분",
-      quality: "premium",
-      unit: "개",
-      isPopular: true,
-      features: ["빠른 시작", "30일 AS", "안전한 방식", "자연스러운 증가"],
-    },
-    {
-      id: "instagram_147",
-      platform: "instagram" as Platform,
-      category: "likes" as any,
-      name: "인스타 좋아요 고속",
-      description: `📣 서비스 특징
-고속으로 진행되는 인스타그램 좋아요 서비스입니다.
-빠른 시간 내에 좋아요 수를 증가시킬 수 있습니다.
-
-🔄 30일 AS 보장
-주문내역에서 '리필'버튼을 눌러 직접 AS 가능합니다.
-
-🌟 작업속도
-주문 후 1~30분 내에 시작됩니다.
-
-⌨ 주문방법
-1. 인스타 게시물 링크를 복사하세요
-2. 예시) https://www.instagram.com/p/xxxxxxxxxxx/
-3. 링크 입력창에 게시물 URL 입력 후 주문
-
-❗ 확인해 주세요
-- 주문 전 공개 상태인지 확인해 주세요.(비공개로 주문 X)
-- 작업 진행 중 게시물 삭제 X`,
-      price: 12,
-      minOrder: 10,
-      maxOrder: 50000,
-      deliveryTime: "1~30분",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["고속 진행", "30일 AS", "즉시 시작", "대량 가능"],
-    },
-    {
-      id: "instagram_215",
-      platform: "instagram" as Platform,
-      category: "likes" as any,
-      name: "인스타 좋아요 저렴",
-      description: `📣 서비스 특징
-경제적인 가격의 인스타그램 좋아요 서비스입니다.
-적은 비용으로 좋아요 수를 증가시킬 수 있습니다.
-
-🔄 30일 AS 보장
-주문내역에서 '리필'버튼을 눌러 직접 AS 가능합니다.
-
-🌟 작업속도
-주문 후 1~30분 내에 시작됩니다.
-
-⌨ 주문방법
-1. 인스타 게시물 링크를 복사하세요
-2. 예시) https://www.instagram.com/p/xxxxxxxxxxx/
-3. 링크 입력창에 게시물 URL 입력 후 주문
-
-❗ 확인해 주세요
-- 주문 전 공개 상태인지 확인해 주세요.(비공개로 주문 X)
-- 작업 진행 중 게시물 삭제 X`,
-      price: 8,
-      minOrder: 20,
-      maxOrder: 9500,
-      deliveryTime: "1~30분",
-      quality: "standard",
-      unit: "개",
-      isPopular: false,
-      features: ["경제적 가격", "30일 AS", "빠른 시작", "소량 주문"],
-    },
-    {
-      id: "instagram_251",
-      platform: "instagram" as Platform,
-      category: "likes" as any,
-      name: "인스타 좋아요 스탠다드",
-      description: `📣 서비스 특징
-균형잡힌 가격과 품질의 인스타그램 좋아요 서비스입니다.
-안정적인 좋아요 증가를 원하시는 분들께 추천합니다.
-
-🔄 30일 AS 보장
-주문내역에서 '리필'버튼을 눌러 직접 AS 가능합니다.
-
-🌟 작업속도
-주문 후 1~30분 내에 시작됩니다.
-
-⌨ 주문방법
-1. 인스타 게시물 링크를 복사하세요
-2. 예시) https://www.instagram.com/p/xxxxxxxxxxx/
-3. 링크 입력창에 게시물 URL 입력 후 주문
-
-❗ 확인해 주세요
-- 주문 전 공개 상태인지 확인해 주세요.(비공개로 주문 X)
-- 작업 진행 중 게시물 삭제 X`,
-      price: 10,
-      minOrder: 20,
-      maxOrder: 20000,
-      deliveryTime: "1~30분",
-      quality: "standard",
-      unit: "개",
-      isPopular: false,
-      features: ["균형잡힌 품질", "30일 AS", "안정적", "중간 가격"],
-    },
-    {
-      id: "instagram_502",
-      platform: "instagram" as Platform,
-      category: "likes" as any,
-      name: "인스타 좋아요 대량",
-      description: `📣 서비스 특징
-대량 주문에 최적화된 인스타그램 좋아요 서비스입니다.
-많은 수량의 좋아요가 필요한 경우에 적합합니다.
-
-🔄 30일 AS 보장
-주문내역에서 '리필'버튼을 눌러 직접 AS 가능합니다.
-
-🌟 작업속도
-주문 후 1~30분 내에 시작됩니다.
-
-⌨ 주문방법
-1. 인스타 게시물 링크를 복사하세요
-2. 예시) https://www.instagram.com/p/xxxxxxxxxxx/
-3. 링크 입력창에 게시물 URL 입력 후 주문
-
-❗ 확인해 주세요
-- 주문 전 공개 상태인지 확인해 주세요.(비공개로 주문 X)
-- 작업 진행 중 게시물 삭제 X`,
-      price: 9,
-      minOrder: 20,
-      maxOrder: 20000,
-      deliveryTime: "1~30분",
-      quality: "standard",
-      unit: "개",
-      isPopular: false,
-      features: ["대량 주문", "30일 AS", "빠른 처리", "벌크 가격"],
-    },
-
-    // 댓글 서비스들
-    {
-      id: "instagram_92",
-      platform: "instagram" as Platform,
-      category: "comments" as any,
-      name: "인스타 랜덤 댓글",
-      description: `📣 서비스 특징
-고퀄리티 계정들이 게시물을 보고 무작위(랜덤) 댓글을 달아드리는 서비스입니다.
-인스타 공식앱을 통해진행되기 때문에 안전하게 이용하실 수 있습니다.
-
-🌟 작업속도
-주문 후 1~120분 내에 자동으로 시작됩니다.
-'주문내역'메뉴에서 진행 현황을 직접 확인할 수 있습니다.
-
-⌨ 주문방법
-1. 주문할 게시물의 '공유' 아이콘 [클릭]
-2. 화면 하단 '링크복사' 아이콘 [클릭]
-3. 링크 입력창에 게시물 주소(링크) 입력하여 주문
-예) https://www.instagram.com/p/xxxxxxxxxxx/
-
-❗ 확인해 주세요
-- 주문실수의 경우 취소 및 수정이 어렵습니다.
-- 주문 전 공개 상태인지 확인해주세요.(비공개로 주문 X)
-- 동일한 게시물에 추가 주문 시에는 꼭 이전 주문이 완료된 후 주문해 주세요.`,
-      price: 80,
-      minOrder: 10,
-      maxOrder: 100,
-      deliveryTime: "1~120분",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["실제 유저", "랜덤 댓글", "안전한 방식", "즉시 시작"],
-    },
-    {
-      id: "instagram_463",
-      platform: "instagram" as Platform,
-      category: "comments" as any,
-      name: "인스타 이모지 댓글",
-      description: `📣 서비스 특징
-고퀄리티 계정들이 게시물을 보고 이모지(이모티콘) 댓글을 달아드리는 서비스입니다.
-인스타 공식앱을 통해진행되기 때문에 안전하게 이용하실 수 있습니다.
-
-🌟 작업속도
-주문 후 1~120분 내에 자동으로 시작됩니다.
-'주문내역'메뉴에서 진행 현황을 직접 확인할 수 있습니다.
-
-⌨ 주문방법
-1. 주문할 게시물의 '공유' 아이콘 [클릭]
-2. 화면 하단 '링크복사' 아이콘 [클릭]
-3. 링크 입력창에 게시물 주소(링크) 입력하여 주문
-예) https://www.instagram.com/p/xxxxxxxxxxx/
-
-❗ 확인해 주세요
-- 주문실수의 경우 취소 및 수정이 어렵습니다.
-- 주문 전 공개 상태인지 확인해주세요.(비공개로 주문 X)
-- 동일한 게시물에 추가 주문 시에는 꼭 이전 주문이 완료된 후 주문해 주세요.`,
-      price: 80,
-      minOrder: 10,
-      maxOrder: 1000,
-      deliveryTime: "1~120분",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["실제 유저", "이모지 댓글", "안전한 방식", "빠른 시작"],
-    },
-    {
-      id: "instagram_462",
-      platform: "instagram" as Platform,
-      category: "comments" as any,
-      name: "인스타 커스텀 댓글",
-      description: `📣 서비스 특징
-고퀄리티 계정들이 '댓글 설정'에 적어주신대로 댓글을 달아드리는 서비스입니다.
-댓글을 1줄에 1개씩 적어주세요. (엔터로 구분)
-인스타 공식앱을 통해진행되기 때문에 안전하게 이용하실 수 있습니다.
-
-🌟 작업속도
-주문 후 1~120분 내에 자동으로 시작됩니다.
-'주문내역'메뉴에서 진행 현황을 직접 확인할 수 있습니다.
-
-⌨ 주문방법
-1. 주문할 게시물의 '공유' 아이콘 [클릭]
-2. 화면 하단 '링크복사' 아이콘 [클릭]
-3. 링크 입력창에 게시물 주소(링크) 입력하여 주문
-예) https://www.instagram.com/p/xxxxxxxxxxx/
-
-❗ 확인해 주세요
-- 주문실수의 경우 취소 및 수정이 어렵습니다.
-- 주문 전 공개 상태인지 확인해주세요.(비공개로 주문 X)
-- 동일한 게시물에 추가 주문 시에는 꼭 이전 주문이 완료된 후 주문해 주세요.
-- 댓글 내용에 해시태그, @ 입력시 작업이 불가능합니다.`,
-      price: 80,
-      minOrder: 5,
-      maxOrder: 100000,
-      deliveryTime: "1~120분",
-      quality: "premium",
-      unit: "개",
-      isPopular: true,
-      features: ["실제 유저", "커스텀 댓글", "맞춤 설정", "대량 주문"],
-    },
-    {
-      id: "instagram_617",
-      platform: "instagram" as Platform,
-      category: "comment_likes" as any,
-      name: "인스타 댓글 좋아요",
-      description: `❗ 게시물 주소가 아닌 댓글 주소를 입력해주세요(주문방법 참고)
-
-📣 서비스 특징
-실제 유저들이 주문링크에 입력한 '댓글'에 좋아요를 눌러드리는 서비스 입니다.
-게시물의 좋아요는 증가하지 않고 댓글의 좋아요만 증가합니다.
-인스타 공식앱을 통해진행되기 때문에 안전하게 이용하실 수 있습니다.
-
-❗PC에서만 링크 복사 가능합니다. 주문방법을 꼭 확인해주세요.
-
-🌟 작업속도
-주문 후 1~120분 내에 자동으로 시작됩니다.
-'주문내역'메뉴에서 진행 현황을 직접 확인할 수 있습니다.
-
-⌨ 주문방법
-1. 'PC'버전 인스타그램에 접속
-2. 주문하실 댓글에 있는 '시간 또는 날짜'(아이디 아래 표시됨)를 [클릭]
-3. 브라우저 상단 주소창에 있는❗댓글주소(URL)를 [복사]❗
-4. 링크 입력창에 댓글 주소(링크) 입력하여 주문
-예) https://www.instagram.com/p/xxxxxxxxxxx/c/12345678910111213
-
-❗ 확인해 주세요
-- 주문실수의 경우 취소 및 수정이 어렵습니다.
-- 주문 전 공개 상태인지 확인해주세요.(비공개로 주문 X)
-- 동일한 게시물에 추가 주문 시에는 꼭 이전 주문이 완료된 후 주문해 주세요.`,
-      price: 50,
-      minOrder: 20,
-      maxOrder: 15000,
-      deliveryTime: "1~120분",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["실제 유저", "댓글 좋아요", "PC 전용", "안전한 방식"],
-    },
-
-    // 릴스 조회수 서비스들
-    {
-      id: "instagram_12",
-      platform: "instagram" as Platform,
-      category: "reels_views" as any,
-      name: "인스타 릴스 조회수",
-      description: `📣 서비스 특징
-고퀄리티 계정으로 릴스/영상 조회수를 늘려드리는 서비스입니다.
-인스타 공식앱을 통해진행되기 때문에 안전하게 이용하실 수 있습니다.
-
-🌟 작업속도
-주문 후 1~60분 내에 자동으로 시작됩니다.
-'주문내역'메뉴에서 진행 현황을 직접 확인할 수 있습니다.
-
-⌨ 주문방법
-1. 주문할 게시물의 '공유' 아이콘 [클릭]
-2. 화면 하단 '링크복사' 아이콘 [클릭]
-3. 링크 입력창에 게시물 주소(링크) 입력하여 주문
-예) https://www.instagram.com/p/xxxxxxxxxxx/
-
-❗ 확인해 주세요
-- 주문실수의 경우 취소 및 수정이 어렵습니다.
-- 주문 전 공개 상태인지 확인해주세요.(비공개로 주문 X)
-- 동일한 게시물에 추가 주문 시에는 꼭 이전 주문이 완료된 후 주문해 주세요.`,
-      price: 0.3,
-      minOrder: 100,
-      maxOrder: 500000,
-      deliveryTime: "1~60분",
-      quality: "premium",
-      unit: "개",
-      isPopular: true,
-      features: ["고퀄리티", "빠른 시작", "안전한 방식", "대량 가능"],
-    },
-    {
-      id: "instagram_48",
-      platform: "instagram" as Platform,
-      category: "reels_views" as any,
-      name: "인스타 릴스 조회수 프리미엄",
-      description: `📣 서비스 특징
-최고퀄리티 외국인 계정으로 릴스/영상 조회수를 늘려드리는 서비스입니다.
-인스타 공식앱을 통해진행되기 때문에 안전하게 이용하실 수 있습니다.
-
-🌟 작업속도
-주문 후 1~60분 내에 자동으로 시작됩니다.
-'주문내역'메뉴에서 진행 현황을 직접 확인할 수 있습니다.
-
-⌨ 주문방법
-1. 주문할 게시물의 '공유' 아이콘 [클릭]
-2. 화면 하단 '링크복사' 아이콘 [클릭]
-3. 링크 입력창에 게시물 주소(링크) 입력하여 주문
-예) https://www.instagram.com/p/xxxxxxxxxxx/
-
-❗ 확인해 주세요
-- 주문실수의 경우 취소 및 수정이 어렵습니다.
-- 주문 전 공개 상태인지 확인해주세요.(비공개로 주문 X)
-- 동일한 게시물에 추가 주문 시에는 꼭 이전 주문이 완료된 후 주문해 주세요.`,
-      price: 0.4,
-      minOrder: 100,
-      maxOrder: 500000,
-      deliveryTime: "1~60분",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["최고퀄리티", "외국인 계정", "빠른 시작", "대량 가능"],
-    },
-    {
-      id: "instagram_15",
-      platform: "instagram" as Platform,
-      category: "reels_views" as any,
-      name: "인스타 릴스 조회수 대량",
-      description: `📣 서비스 특징
-실제 활동 계정으로 릴스 조회수를 늘려드리는 서비스입니다.
-인스타 공식앱을 통해진행되기 때문에 안전하게 이용하실 수 있습니다.
-
-🌟 작업속도
-주문 후 1~60분 내에 자동으로 시작됩니다.
-'주문내역'메뉴에서 진행 현황을 직접 확인할 수 있습니다.
-
-⌨ 주문방법
-1. 주문할 게시물의 '공유' 아이콘 [클릭]
-2. 화면 하단 '링크복사' 아이콘 [클릭]
-3. 링크 입력창에 게시물 주소(링크) 입력하여 주문
-예) https://www.instagram.com/p/xxxxxxxxxxx/
-
-❗ 확인해 주세요
-- 주문실수의 경우 취소 및 수정이 어렵습니다.
-- 주문 전 공개 상태인지 확인해주세요.(비공개로 주문 X)
-- 동일한 게시물에 추가 주문 시에는 꼭 이전 주문이 완료된 후 주문해 주세요.`,
-      price: 0.6,
-      minOrder: 100,
-      maxOrder: 10000000,
-      deliveryTime: "1~60분",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["실제 유저", "최대 1천만개", "안전한 방식", "즉시 시작"],
-    },
-    {
-      id: "instagram_37",
-      platform: "instagram" as Platform,
-      category: "story_views" as any,
-      name: "인스타 스토리 조회수",
-      description: `📣 서비스 특징
-고퀄리티 계정으로 스토리 조회수를 늘려드리는 서비스입니다.
-가장 최근(마지막 업로드)스토리에 조회수가 유입됩니다.
-인스타 공식앱을 통해진행되기 때문에 안전하게 이용하실 수 있습니다.
-
-🌟 작업속도
-주문 후 1~180분 내에 자동으로 시작됩니다.
-'주문내역'메뉴에서 진행 현황을 직접 확인할 수 있습니다.
-
-⌨ 주문방법
-1. 인스타 프로필 화면에서 프로필편집 [클릭]
-2. '사용자이름' 복사
-3. 링크 입력창에 인스타그램 아이디(사용자이름) 입력 후 주문
-
-❗ 확인해 주세요
-- 주문실수의 경우 취소 및 수정이 어렵습니다.
-- 주문 전 공개 상태인지 확인해주세요.(비공개로 주문 X)
-- 동일한 스토리에 추가 주문 시에는 꼭 이전 주문이 완료된 후 주문해 주세요.`,
-      price: 1.5,
-      minOrder: 50,
-      maxOrder: 100000,
-      deliveryTime: "1~180분",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["스토리 전용", "최근 스토리", "고퀄리티", "안전한 방식"],
-    },
-
-    // ===== 유튜브 서비스 =====
-    {
-      id: "youtube_01",
-      platform: "youtube" as Platform,
-      category: "subscribers" as any,
-      name: "유튜브 구독자",
-      description: "유튜브 채널의 구독자를 늘려드립니다.",
-      price: 25,
-      minOrder: 10,
-      maxOrder: 100000,
-      deliveryTime: "1~24시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: true,
-      features: ["실제 유저", "안전한 방식", "빠른 시작", "고품질"],
-    },
-    {
-      id: "youtube_02",
-      platform: "youtube" as Platform,
-      category: "views" as any,
-      name: "유튜브 조회수",
-      description: "유튜브 영상의 조회수를 늘려드립니다.",
-      price: 2,
-      minOrder: 100,
-      maxOrder: 1000000,
-      deliveryTime: "1~12시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: true,
-      features: ["고속 처리", "안전한 방식", "대량 가능", "자연스러운 증가"],
-    },
-    {
-      id: "youtube_03",
-      platform: "youtube" as Platform,
-      category: "likes" as any,
-      name: "유튜브 좋아요",
-      description: "유튜브 영상의 좋아요를 늘려드립니다.",
-      price: 20,
-      minOrder: 10,
-      maxOrder: 50000,
-      deliveryTime: "1~6시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["고품질", "빠른 처리", "안전한 방식", "실제 유저"],
-    },
-    {
-      id: "youtube_04",
-      platform: "youtube" as Platform,
-      category: "comments" as any,
-      name: "유튜브 댓글",
-      description: "유튜브 영상에 댓글을 달아드립니다.",
-      price: 150,
-      minOrder: 5,
-      maxOrder: 500,
-      deliveryTime: "1~48시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["실제 유저", "커스텀 댓글", "고품질", "안전한 방식"],
-    },
-
-    // ===== 틱톡 서비스 =====
-    {
-      id: "tiktok_01",
-      platform: "tiktok" as Platform,
-      category: "followers" as any,
-      name: "틱톡 팔로워",
-      description: "틱톡 계정의 팔로워를 늘려드립니다.",
-      price: 30,
-      minOrder: 20,
-      maxOrder: 50000,
-      deliveryTime: "1~24시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: true,
-      features: ["실제 유저", "안전한 방식", "고품질", "빠른 시작"],
-    },
-    {
-      id: "tiktok_02",
-      platform: "tiktok" as Platform,
-      category: "likes" as any,
-      name: "틱톡 좋아요",
-      description: "틱톡 영상의 좋아요를 늘려드립니다.",
-      price: 12,
-      minOrder: 20,
-      maxOrder: 100000,
-      deliveryTime: "1~6시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: true,
-      features: ["고속 처리", "안전한 방식", "대량 가능", "자연스러운 증가"],
-    },
-    {
-      id: "tiktok_03",
-      platform: "tiktok" as Platform,
-      category: "views" as any,
-      name: "틱톡 조회수",
-      description: "틱톡 영상의 조회수를 늘려드립니다.",
-      price: 1,
-      minOrder: 100,
-      maxOrder: 5000000,
-      deliveryTime: "1~12시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["고속 처리", "대량 가능", "안전한 방식", "즉시 시작"],
-    },
-
-    // ===== 페이스북 서비스 =====
-    {
-      id: "facebook_01",
-      platform: "facebook" as Platform,
-      category: "followers" as any,
-      name: "페이스북 팔로워",
-      description: "페이스북 계정의 팔로워를 늘려드립니다.",
-      price: 25,
-      minOrder: 20,
-      maxOrder: 50000,
-      deliveryTime: "1~24시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["실제 유저", "안전한 방식", "고품질", "빠른 시작"],
-    },
-    {
-      id: "facebook_02",
-      platform: "facebook" as Platform,
-      category: "likes" as any,
-      name: "페이스북 좋아요",
-      description: "페이스북 게시물의 좋아요를 늘려드립니다.",
-      price: 18,
-      minOrder: 20,
-      maxOrder: 50000,
-      deliveryTime: "1~12시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: true,
-      features: ["고속 처리", "안전한 방식", "실제 유저", "자연스러운 증가"],
-    },
-    {
-      id: "facebook_03",
-      platform: "facebook" as Platform,
-      category: "page_likes" as any,
-      name: "페이스북 페이지 좋아요",
-      description: "페이스북 페이지의 좋아요를 늘려드립니다.",
-      price: 22,
-      minOrder: 20,
-      maxOrder: 50000,
-      deliveryTime: "1~24시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["실제 유저", "안전한 방식", "고품질", "페이지 전용"],
-    },
-
-    // ===== 트위터/X 서비스 =====
-    {
-      id: "twitter_01",
-      platform: "twitter" as Platform,
-      category: "followers" as any,
-      name: "X 팔로워",
-      description: "X(트위터) 계정의 팔로워를 늘려드립니다.",
-      price: 35,
-      minOrder: 20,
-      maxOrder: 50000,
-      deliveryTime: "1~24시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["실제 유저", "안전한 방식", "고품질", "빠른 시작"],
-    },
-    {
-      id: "twitter_02",
-      platform: "twitter" as Platform,
-      category: "likes" as any,
-      name: "X 좋아요",
-      description: "X(트위터) 게시물의 좋아요를 늘려드립니다.",
-      price: 25,
-      minOrder: 10,
-      maxOrder: 50000,
-      deliveryTime: "1~6시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: true,
-      features: ["고속 처리", "안전한 방식", "실제 유저", "자연스러운 증가"],
-    },
-    {
-      id: "twitter_03",
-      platform: "twitter" as Platform,
-      category: "retweets" as any,
-      name: "X 리트윗",
-      description: "X(트위터) 게시물의 리트윗을 늘려드립니다.",
-      price: 40,
-      minOrder: 5,
-      maxOrder: 10000,
-      deliveryTime: "1~12시간",
-      quality: "premium",
-      unit: "개",
-      isPopular: false,
-      features: ["실제 유저", "안전한 방식", "고품질", "확산 효과"],
-    },
-  ];
+  // 컴포넌트 마운트시 서비스 데이터 로드
+  useEffect(() => {
+    loadServices();
+  }, []);
 
   // 할인율 계산 (수량에 따라 최대 15% 할인)
   const calculateDiscount = (quantity: number): number => {
@@ -853,12 +232,6 @@ export default function OrderProcess({
       setIsLoading(false);
     }
   };
-
-  // 컴포넌트 마운트시 초기화 (한번만 실행)
-  useEffect(() => {
-    // 컴포넌트가 처음 마운트될 때만 실행
-    console.log("OrderProcess 컴포넌트 마운트됨");
-  }, []);
 
   // 플랫폼 선택시 자동으로 다음 단계로 이동
   useEffect(() => {
@@ -1044,7 +417,6 @@ export default function OrderProcess({
                           platformData.platform,
                         );
                         setSelectedPlatform(platformData.platform);
-                        // useEffect에서 자동으로 다음 스텝으로 이동됨
                       }
                     }}
                     disabled={!platformData.active}
@@ -1066,240 +438,241 @@ export default function OrderProcess({
             </div>
           )}
 
-          {/* Step 2: 서비스 카테고리 및 세부 서비스 선택 */}
+          {/* Step 2: 세부 서비스를 선택해주세요 (애플 스타일) */}
           {currentStep === 2 && (
-            <div className="space-y-8">
-              <div className="text-center mb-8">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-[#22426f] to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-lg">
-                    02
+            <div className="space-y-12">
+              {/* 헤더 - 애플 스타일 */}
+              <div className="text-center">
+                <h2 className="text-3xl font-light text-gray-900 mb-2">
+                  세부 서비스를 선택해주세요
+                </h2>
+                <p className="text-lg text-gray-500">
+                  원하시는 서비스를 선택하시면 바로 다음 단계로 진행됩니다
+                </p>
+              </div>
+
+              {/* 로딩 상태 */}
+              {servicesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin w-8 h-8 border-4 border-[#22426f] border-t-transparent rounded-full"></div>
+                  <span className="ml-3 text-gray-600">서비스 로딩 중...</span>
+                </div>
+              ) : allServices.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">📦</div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    등록된 서비스가 없습니다
+                  </h3>
+                  <p className="text-gray-500">
+                    관리자가 서비스를 추가할 때까지 기다려주세요.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* 한국인/외국인 선택 - 애플 스타일 */}
+                  <div className="flex items-center justify-center">
+                    <div className="bg-gray-100 rounded-full p-1 flex">
+                      <button
+                        onClick={() => setSelectedAccountType("korean")}
+                        className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                          selectedAccountType === "korean"
+                            ? "bg-white text-gray-900 shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        🇰🇷 한국인
+                      </button>
+                      <button
+                        onClick={() => setSelectedAccountType("foreign")}
+                        className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                          selectedAccountType === "foreign"
+                            ? "bg-white text-gray-900 shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        🌍 외국인
+                      </button>
+                    </div>
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    세부 서비스를 선택해주세요.
-                  </h2>
-                </div>
-              </div>
 
-              {/* 한국인/외국인 탭 */}
-              <div className="flex rounded-lg border border-gray-200 overflow-hidden max-w-lg mx-auto">
-                <button
-                  onClick={() => setSelectedAccountType("korean")}
-                  className={`flex-1 py-3 px-6 font-medium transition-colors ${
-                    selectedAccountType === "korean"
-                      ? "bg-gray-100 text-gray-900"
-                      : "bg-white text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="mr-2">🇰🇷</span>
-                  한국인
-                </button>
-                <button
-                  onClick={() => setSelectedAccountType("foreign")}
-                  className={`flex-1 py-3 px-6 font-medium transition-colors ${
-                    selectedAccountType === "foreign"
-                      ? "bg-[#22426f] text-white"
-                      : "bg-white text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="mr-2">🌍</span>
-                  외국인
-                </button>
-              </div>
+                  {/* 서비스 목록 - 애플 스타일 단순 리스트 */}
+                  <div className="max-w-2xl mx-auto">
+                    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                      {/* 팔로워/구독자 서비스 */}
+                      {[...categories.followers, ...categories.subscribers].map(
+                        (service, index) => (
+                          <button
+                            key={service.id}
+                            onClick={() => handleServiceSelect(service)}
+                            className={`w-full px-6 py-4 text-left hover:bg-gray-50 transition-colors ${
+                              index !==
+                              [
+                                ...categories.followers,
+                                ...categories.subscribers,
+                              ].length -
+                                1
+                                ? "border-b border-gray-100"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <span className="text-sm">👥</span>
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {service.name}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {service.price.toLocaleString()}원 /{" "}
+                                    {service.unit}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {service.isPopular && (
+                                  <span className="px-2 py-1 bg-red-50 text-red-600 text-xs rounded-full font-medium">
+                                    인기
+                                  </span>
+                                )}
+                                <svg
+                                  className="w-5 h-5 text-gray-400"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 5l7 7-7 7"
+                                  />
+                                </svg>
+                              </div>
+                            </div>
+                          </button>
+                        ),
+                      )}
 
-              {/* 간소화된 서비스 카테고리 그리드 */}
-              <div className="max-w-4xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {/* 팔로워/구독자 */}
-                  {(categories.followers.length > 0 ||
-                    categories.subscribers.length > 0) && (
-                    <div className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group">
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                          <span className="text-2xl text-white">👥</span>
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          {selectedPlatform === "youtube"
-                            ? "구독자 늘리기"
-                            : "팔로워 늘리기"}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          {selectedPlatform === "youtube"
-                            ? "실제 구독자로 채널 성장"
-                            : "실제 팔로워로 계정 성장"}
-                        </p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {[...categories.followers, ...categories.subscribers]
-                            .slice(0, 2)
-                            .map((service) => (
-                              <button
-                                key={service.id}
-                                onClick={() => handleServiceSelect(service)}
-                                className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs rounded-full hover:bg-blue-100 transition-colors"
+                      {/* 좋아요 서비스 */}
+                      {categories.likes.map((service, index) => (
+                        <button
+                          key={service.id}
+                          onClick={() => handleServiceSelect(service)}
+                          className={`w-full px-6 py-4 text-left hover:bg-gray-50 transition-colors ${
+                            index !== categories.likes.length - 1 ||
+                            [...categories.views, ...categories.reels_views]
+                              .length > 0
+                              ? "border-b border-gray-100"
+                              : ""
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                <span className="text-sm">❤️</span>
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">
+                                  {service.name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {service.price.toLocaleString()}원 /{" "}
+                                  {service.unit}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {service.isPopular && (
+                                <span className="px-2 py-1 bg-red-50 text-red-600 text-xs rounded-full font-medium">
+                                  인기
+                                </span>
+                              )}
+                              <svg
+                                className="w-5 h-5 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
                               >
-                                {service.name}
-                              </button>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
 
-                  {/* 좋아요 */}
-                  {categories.likes.length > 0 && (
-                    <div className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-red-300 transition-all cursor-pointer group">
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                          <span className="text-2xl text-white">❤️</span>
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          좋아요 늘리기
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          게시물 인기도 향상
-                        </p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {categories.likes.slice(0, 2).map((service) => (
-                            <button
-                              key={service.id}
-                              onClick={() => handleServiceSelect(service)}
-                              className="px-3 py-1.5 bg-red-50 text-red-600 text-xs rounded-full hover:bg-red-100 transition-colors"
-                            >
-                              {service.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      {/* 조회수 서비스 */}
+                      {[...categories.views, ...categories.reels_views].map(
+                        (service, index) => (
+                          <button
+                            key={service.id}
+                            onClick={() => handleServiceSelect(service)}
+                            className={`w-full px-6 py-4 text-left hover:bg-gray-50 transition-colors ${
+                              index !==
+                              [...categories.views, ...categories.reels_views]
+                                .length -
+                                1
+                                ? "border-b border-gray-100"
+                                : ""
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                  <span className="text-sm">👁️</span>
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {service.name}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {service.price.toLocaleString()}원 /{" "}
+                                    {service.unit}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {service.isPopular && (
+                                  <span className="px-2 py-1 bg-red-50 text-red-600 text-xs rounded-full font-medium">
+                                    인기
+                                  </span>
+                                )}
+                                <svg
+                                  className="w-5 h-5 text-gray-400"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 5l7 7-7 7"
+                                  />
+                                </svg>
+                              </div>
+                            </div>
+                          </button>
+                        ),
+                      )}
                     </div>
-                  )}
+                  </div>
+                </>
+              )}
 
-                  {/* 조회수 */}
-                  {(categories.views.length > 0 ||
-                    categories.reels_views.length > 0) && (
-                    <div className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-green-300 transition-all cursor-pointer group">
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                          <span className="text-2xl text-white">👁️</span>
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          {selectedPlatform === "instagram"
-                            ? "릴스 조회수 늘리기"
-                            : "조회수 늘리기"}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          {selectedPlatform === "instagram"
-                            ? "릴스 영상 노출 확대"
-                            : "영상 조회수 증가"}
-                        </p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {[...categories.views, ...categories.reels_views]
-                            .slice(0, 2)
-                            .map((service) => (
-                              <button
-                                key={service.id}
-                                onClick={() => handleServiceSelect(service)}
-                                className="px-3 py-1.5 bg-green-50 text-green-600 text-xs rounded-full hover:bg-green-100 transition-colors"
-                              >
-                                {service.name}
-                              </button>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 댓글 */}
-                  {categories.comments.length > 0 && (
-                    <div className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-purple-300 transition-all cursor-pointer group">
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-violet-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                          <span className="text-2xl text-white">💬</span>
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          댓글 늘리기
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          게시물 참여도 향상
-                        </p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {categories.comments.slice(0, 2).map((service) => (
-                            <button
-                              key={service.id}
-                              onClick={() => handleServiceSelect(service)}
-                              className="px-3 py-1.5 bg-purple-50 text-purple-600 text-xs rounded-full hover:bg-purple-100 transition-colors"
-                            >
-                              {service.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 페이스북 페이지 좋아요 */}
-                  {categories.page_likes.length > 0 && (
-                    <div className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-300 transition-all cursor-pointer group">
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                          <span className="text-2xl text-white">📘</span>
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          페이지 좋아요
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          페이스북 페이지 성장
-                        </p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {categories.page_likes.slice(0, 2).map((service) => (
-                            <button
-                              key={service.id}
-                              onClick={() => handleServiceSelect(service)}
-                              className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs rounded-full hover:bg-blue-100 transition-colors"
-                            >
-                              {service.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 트위터 리트윗 */}
-                  {categories.retweets.length > 0 && (
-                    <div className="bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-cyan-300 transition-all cursor-pointer group">
-                      <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                          <span className="text-2xl text-white">🔄</span>
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          리트윗
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          트윗 확산 효과
-                        </p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {categories.retweets.slice(0, 2).map((service) => (
-                            <button
-                              key={service.id}
-                              onClick={() => handleServiceSelect(service)}
-                              className="px-3 py-1.5 bg-cyan-50 text-cyan-600 text-xs rounded-full hover:bg-cyan-100 transition-colors"
-                            >
-                              {service.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 뒤로가기 버튼 */}
-              <div className="flex justify-start">
+              {/* 뒤로가기 버튼 - 애플 스타일 */}
+              <div className="text-center">
                 <button
-                  onClick={handlePrev}
-                  className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => setCurrentStep(1)}
+                  className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >
-                  ← 이전 단계
+                  ← 다른 플랫폼 선택하기
                 </button>
               </div>
             </div>
@@ -1329,7 +702,7 @@ export default function OrderProcess({
                 </p>
                 <div className="flex gap-4 mt-3 text-sm">
                   <span className="bg-white px-3 py-1 rounded-full">
-                    가격: {selectedService.price.toLocaleString()}원/100개
+                    가격: {selectedService.price.toLocaleString()}원/1개
                   </span>
                   <span className="bg-white px-3 py-1 rounded-full">
                     처리시간: {selectedService.deliveryTime}

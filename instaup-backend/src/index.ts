@@ -10,7 +10,7 @@ import userRoutes from './routes/user'
 import serviceRoutes from './routes/service'
 import orderRoutes from './routes/order'
 import paymentRoutes from './routes/payment'
-import adminRoutes from './routes/admin'
+import adminRoutes from './routes/admin.routes'
 import analyticsRoutes from './routes/analytics'
 import referralRoutes from './routes/referral'
 
@@ -30,6 +30,7 @@ app.use(cors({
     "http://localhost:5173",
     "http://localhost:3000",
     "http://localhost:5174",
+    "https://instaup.kr",
     "https://instaup-clean.netlify.app",
     "https://delicate-profiterole-bbf92a.netlify.app",
     process.env.CORS_ORIGIN || "https://same-4001w3tt33q-latest.netlify.app"
