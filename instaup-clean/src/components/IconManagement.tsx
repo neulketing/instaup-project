@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 // 플랫폼별 아이콘 데이터 타입
 interface PlatformIcon {
@@ -15,89 +15,109 @@ interface PlatformIcon {
 // 기본 아이콘 데이터
 const defaultIcons: PlatformIcon[] = [
   {
-    id: 'instagram',
-    platform: 'instagram',
-    name: '인스타그램',
-    emoji: '👑',
-    color: '#E4405F',
-    bgColor: 'from-pink-500 to-purple-600',
-    description: '인스타그램 팔로워, 좋아요 서비스',
-    isActive: true
+    id: "instagram",
+    platform: "instagram",
+    name: "인스타그램",
+    emoji: "👑",
+    color: "#E4405F",
+    bgColor: "from-pink-500 to-purple-600",
+    description: "인스타그램 팔로워, 좋아요 서비스",
+    isActive: true,
   },
   {
-    id: 'youtube',
-    platform: 'youtube',
-    name: '유튜브',
-    emoji: '🎬',
-    color: '#FF0000',
-    bgColor: 'from-red-500 to-red-600',
-    description: '유튜브 구독자, 조회수 서비스',
-    isActive: true
+    id: "youtube",
+    platform: "youtube",
+    name: "유튜브",
+    emoji: "🎬",
+    color: "#FF0000",
+    bgColor: "from-red-500 to-red-600",
+    description: "유튜브 구독자, 조회수 서비스",
+    isActive: true,
   },
   {
-    id: 'tiktok',
-    platform: 'tiktok',
-    name: '틱톡',
-    emoji: '🎵',
-    color: '#000000',
-    bgColor: 'from-black to-gray-800',
-    description: '틱톡 팔로워, 좋아요 서비스',
-    isActive: true
+    id: "tiktok",
+    platform: "tiktok",
+    name: "틱톡",
+    emoji: "🎵",
+    color: "#000000",
+    bgColor: "from-black to-gray-800",
+    description: "틱톡 팔로워, 좋아요 서비스",
+    isActive: true,
   },
   {
-    id: 'facebook',
-    platform: 'facebook',
-    name: '페이스북',
-    emoji: '📘',
-    color: '#1877F2',
-    bgColor: 'from-blue-600 to-blue-700',
-    description: '페이스북 페이지 좋아요, 팔로워 서비스',
-    isActive: true
+    id: "facebook",
+    platform: "facebook",
+    name: "페이스북",
+    emoji: "📘",
+    color: "#1877F2",
+    bgColor: "from-blue-600 to-blue-700",
+    description: "페이스북 페이지 좋아요, 팔로워 서비스",
+    isActive: true,
   },
   {
-    id: 'twitter',
-    platform: 'twitter',
-    name: '트위터 (X)',
-    emoji: '🐦',
-    color: '#1DA1F2',
-    bgColor: 'from-blue-400 to-blue-500',
-    description: '트위터 팔로워, 리트윗 서비스',
-    isActive: false
+    id: "twitter",
+    platform: "twitter",
+    name: "트위터 (X)",
+    emoji: "🐦",
+    color: "#1DA1F2",
+    bgColor: "from-blue-400 to-blue-500",
+    description: "트위터 팔로워, 리트윗 서비스",
+    isActive: false,
   },
   {
-    id: 'discord',
-    platform: 'discord',
-    name: '디스코드',
-    emoji: '🎮',
-    color: '#5865F2',
-    bgColor: 'from-indigo-500 to-purple-600',
-    description: '디스코드 멤버, 서버 부스팅',
-    isActive: false
+    id: "discord",
+    platform: "discord",
+    name: "디스코드",
+    emoji: "🎮",
+    color: "#5865F2",
+    bgColor: "from-indigo-500 to-purple-600",
+    description: "디스코드 멤버, 서버 부스팅",
+    isActive: false,
   },
 ];
 
 // 이모지 선택 옵션
 const availableEmojis = [
-  '👑', '🎬', '🎵', '📘', '🐦', '🎮',
-  '❤️', '👥', '🔥', '⭐', '💎', '🚀',
-  '📱', '💻', '🎯', '🏆', '🌟', '⚡',
-  '🎨', '🎪', '🎭', '🎸', '🎤', '🎧'
+  "👑",
+  "🎬",
+  "🎵",
+  "📘",
+  "🐦",
+  "🎮",
+  "❤️",
+  "👥",
+  "🔥",
+  "⭐",
+  "💎",
+  "🚀",
+  "📱",
+  "💻",
+  "🎯",
+  "🏆",
+  "🌟",
+  "⚡",
+  "🎨",
+  "🎪",
+  "🎭",
+  "🎸",
+  "🎤",
+  "🎧",
 ];
 
 export default function IconManagement() {
   const [icons, setIcons] = useState<PlatformIcon[]>(defaultIcons);
   const [editingIcon, setEditingIcon] = useState<PlatformIcon | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   // 로컬스토리지에서 아이콘 설정 로드
   useEffect(() => {
-    const savedIcons = localStorage.getItem('platformIcons');
+    const savedIcons = localStorage.getItem("platformIcons");
     if (savedIcons) {
       try {
         setIcons(JSON.parse(savedIcons));
       } catch (error) {
-        console.error('Failed to load saved icons:', error);
+        console.error("Failed to load saved icons:", error);
       }
     }
   }, []);
@@ -105,7 +125,7 @@ export default function IconManagement() {
   // 아이콘 설정 저장
   const saveIcons = (newIcons: PlatformIcon[]) => {
     setIcons(newIcons);
-    localStorage.setItem('platformIcons', JSON.stringify(newIcons));
+    localStorage.setItem("platformIcons", JSON.stringify(newIcons));
   };
 
   // 아이콘 편집 시작
@@ -118,13 +138,13 @@ export default function IconManagement() {
   const addNewIcon = () => {
     const newIcon: PlatformIcon = {
       id: `custom_${Date.now()}`,
-      platform: '',
-      name: '',
-      emoji: '🎯',
-      color: '#6366F1',
-      bgColor: 'from-indigo-500 to-purple-600',
-      description: '',
-      isActive: true
+      platform: "",
+      name: "",
+      emoji: "🎯",
+      color: "#6366F1",
+      bgColor: "from-indigo-500 to-purple-600",
+      description: "",
+      isActive: true,
     };
     setEditingIcon(newIcon);
     setIsModalOpen(true);
@@ -135,7 +155,9 @@ export default function IconManagement() {
     if (!editingIcon) return;
 
     const updatedIcons = [...icons];
-    const existingIndex = updatedIcons.findIndex(icon => icon.id === editingIcon.id);
+    const existingIndex = updatedIcons.findIndex(
+      (icon) => icon.id === editingIcon.id,
+    );
 
     if (existingIndex >= 0) {
       updatedIcons[existingIndex] = editingIcon;
@@ -150,24 +172,25 @@ export default function IconManagement() {
 
   // 아이콘 삭제
   const deleteIcon = (iconId: string) => {
-    if (confirm('정말 이 아이콘을 삭제하시겠습니까?')) {
-      const updatedIcons = icons.filter(icon => icon.id !== iconId);
+    if (confirm("정말 이 아이콘을 삭제하시겠습니까?")) {
+      const updatedIcons = icons.filter((icon) => icon.id !== iconId);
       saveIcons(updatedIcons);
     }
   };
 
   // 아이콘 활성화/비활성화 토글
   const toggleIconActive = (iconId: string) => {
-    const updatedIcons = icons.map(icon =>
-      icon.id === iconId ? { ...icon, isActive: !icon.isActive } : icon
+    const updatedIcons = icons.map((icon) =>
+      icon.id === iconId ? { ...icon, isActive: !icon.isActive } : icon,
     );
     saveIcons(updatedIcons);
   };
 
   // 필터링된 아이콘들
-  const filteredIcons = icons.filter(icon =>
-    icon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    icon.platform.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredIcons = icons.filter(
+    (icon) =>
+      icon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      icon.platform.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
@@ -176,7 +199,9 @@ export default function IconManagement() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">🎨 아이콘 관리</h2>
-          <p className="text-gray-600 mt-1">서비스 플랫폼 아이콘을 관리하고 편집하세요</p>
+          <p className="text-gray-600 mt-1">
+            서비스 플랫폼 아이콘을 관리하고 편집하세요
+          </p>
         </div>
         <button
           onClick={addNewIcon}
@@ -204,8 +229,8 @@ export default function IconManagement() {
             key={icon.id}
             className={`border-2 rounded-lg p-4 transition-all ${
               icon.isActive
-                ? 'border-green-300 bg-green-50'
-                : 'border-gray-200 bg-gray-50 opacity-60'
+                ? "border-green-300 bg-green-50"
+                : "border-gray-200 bg-gray-50 opacity-60"
             }`}
           >
             {/* 아이콘 미리보기 */}
@@ -242,7 +267,9 @@ export default function IconManagement() {
                 >
                   편집
                 </button>
-                {!['instagram', 'youtube', 'tiktok', 'facebook'].includes(icon.id) && (
+                {!["instagram", "youtube", "tiktok", "facebook"].includes(
+                  icon.id,
+                ) && (
                   <button
                     onClick={() => deleteIcon(icon.id)}
                     className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
@@ -256,11 +283,11 @@ export default function IconManagement() {
                 onClick={() => toggleIconActive(icon.id)}
                 className={`px-3 py-1 text-sm rounded transition-colors ${
                   icon.isActive
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? "bg-green-100 text-green-700 hover:bg-green-200"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                {icon.isActive ? '활성' : '비활성'}
+                {icon.isActive ? "활성" : "비활성"}
               </button>
             </div>
           </div>
@@ -272,7 +299,9 @@ export default function IconManagement() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-xl font-bold mb-4">
-              {icons.find(i => i.id === editingIcon.id) ? '아이콘 편집' : '새 아이콘 추가'}
+              {icons.find((i) => i.id === editingIcon.id)
+                ? "아이콘 편집"
+                : "새 아이콘 추가"}
             </h3>
 
             <div className="space-y-4">
@@ -284,7 +313,9 @@ export default function IconManagement() {
                 <input
                   type="text"
                   value={editingIcon.platform}
-                  onChange={(e) => setEditingIcon({ ...editingIcon, platform: e.target.value })}
+                  onChange={(e) =>
+                    setEditingIcon({ ...editingIcon, platform: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#22426f]"
                   placeholder="예: instagram, youtube"
                 />
@@ -298,7 +329,9 @@ export default function IconManagement() {
                 <input
                   type="text"
                   value={editingIcon.name}
-                  onChange={(e) => setEditingIcon({ ...editingIcon, name: e.target.value })}
+                  onChange={(e) =>
+                    setEditingIcon({ ...editingIcon, name: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#22426f]"
                   placeholder="예: 인스타그램"
                 />
@@ -315,7 +348,9 @@ export default function IconManagement() {
                       key={emoji}
                       onClick={() => setEditingIcon({ ...editingIcon, emoji })}
                       className={`w-8 h-8 text-lg hover:bg-gray-100 rounded ${
-                        editingIcon.emoji === emoji ? 'bg-blue-100 ring-2 ring-blue-500' : ''
+                        editingIcon.emoji === emoji
+                          ? "bg-blue-100 ring-2 ring-blue-500"
+                          : ""
                       }`}
                     >
                       {emoji}
@@ -332,7 +367,9 @@ export default function IconManagement() {
                 <input
                   type="color"
                   value={editingIcon.color}
-                  onChange={(e) => setEditingIcon({ ...editingIcon, color: e.target.value })}
+                  onChange={(e) =>
+                    setEditingIcon({ ...editingIcon, color: e.target.value })
+                  }
                   className="w-full h-10 border border-gray-300 rounded"
                 />
               </div>
@@ -344,7 +381,12 @@ export default function IconManagement() {
                 </label>
                 <textarea
                   value={editingIcon.description}
-                  onChange={(e) => setEditingIcon({ ...editingIcon, description: e.target.value })}
+                  onChange={(e) =>
+                    setEditingIcon({
+                      ...editingIcon,
+                      description: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#22426f]"
                   rows={3}
                   placeholder="서비스 설명을 입력하세요"
@@ -361,8 +403,12 @@ export default function IconManagement() {
                     {editingIcon.emoji}
                   </div>
                   <div>
-                    <p className="font-medium">{editingIcon.name || '이름 없음'}</p>
-                    <p className="text-sm text-gray-600">{editingIcon.platform || '플랫폼 없음'}</p>
+                    <p className="font-medium">
+                      {editingIcon.name || "이름 없음"}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {editingIcon.platform || "플랫폼 없음"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -396,19 +442,19 @@ export default function IconManagement() {
           </div>
           <div>
             <p className="text-2xl font-bold text-green-600">
-              {icons.filter(i => i.isActive).length}
+              {icons.filter((i) => i.isActive).length}
             </p>
             <p className="text-sm text-gray-600">활성 아이콘</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-600">
-              {icons.filter(i => !i.isActive).length}
+              {icons.filter((i) => !i.isActive).length}
             </p>
             <p className="text-sm text-gray-600">비활성 아이콘</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-blue-600">
-              {icons.filter(i => i.id.startsWith('custom_')).length}
+              {icons.filter((i) => i.id.startsWith("custom_")).length}
             </p>
             <p className="text-sm text-gray-600">커스텀 아이콘</p>
           </div>

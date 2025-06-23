@@ -50,8 +50,11 @@ class APITestService {
       const responseTime = Date.now() - startTime;
 
       // CORS 에러인 경우 특별 처리
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        console.warn('🚨 CORS 에러 발생 - Railway 재배포 필요');
+      if (
+        error instanceof TypeError &&
+        error.message.includes("Failed to fetch")
+      ) {
+        console.warn("🚨 CORS 에러 발생 - Railway 재배포 필요");
         return {
           endpoint,
           status: "error",
