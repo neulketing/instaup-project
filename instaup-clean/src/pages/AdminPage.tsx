@@ -9,6 +9,7 @@ import DataExportPanel from "../components/DataExportPanel";
 import ProductManagement from "../components/ProductManagement";
 import RoleManagement from "../components/RoleManagement";
 import ServiceManagementModal from "../components/ServiceManagementModal";
+import IconManagement from "../components/IconManagement";
 // import { PermissionGuard, usePermissions } from "../hooks/usePermissions";
 import {
   type DashboardMetrics,
@@ -38,6 +39,7 @@ export default function AdminPage() {
     | "users"
     | "services"
     | "products"
+    | "icons"
     | "connections"
     | "analytics"
     | "automation"
@@ -425,6 +427,7 @@ export default function AdminPage() {
                 { id: "users", label: "👥 사용자 관리", icon: "👥" },
                 { id: "services", label: "🛍️ 서비스 관리", icon: "🛍️" },
                 { id: "products", label: "📦 상품 관리", icon: "📦" },
+                { id: "icons", label: "🎨 아이콘 관리", icon: "🎨" },
                 { id: "connections", label: "🔗 연결 관리", icon: "🔗" },
                 { id: "analytics", label: "📈 고급 분석", icon: "📈" },
                 { id: "automation", label: "🤖 자동화", icon: "🤖" },
@@ -1086,6 +1089,9 @@ export default function AdminPage() {
 
         {/* 상품 관리 */}
         {activeTab === "products" && <ProductManagement services={services} />}
+
+        {/* 아이콘 관리 */}
+        {activeTab === "icons" && <IconManagement />}
 
         {/* 연결 관리 */}
         {activeTab === "connections" && <ConnectionManagement />}

@@ -799,7 +799,27 @@ export default function OrderProcess({
   // 이전 단계로 이동
   const handlePrev = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      const newStep = currentStep - 1;
+      setCurrentStep(newStep);
+
+      // 이전 단계로 갈 때 해당 단계의 선택 상태 초기화
+      if (newStep === 1) {
+        // 1단계로 돌아가면 모든 선택 초기화
+        setSelectedPlatform(null);
+        setSelectedAccountType("korean");
+        setSelectedService(null);
+        setTargetUrl("");
+        setQuantity(100);
+      } else if (newStep === 2) {
+        // 2단계로 돌아가면 서비스 선택 이후 초기화
+        setSelectedService(null);
+        setTargetUrl("");
+        setQuantity(100);
+      } else if (newStep === 3) {
+        // 3단계로 돌아가면 주문 정보만 초기화
+        setTargetUrl("");
+        setQuantity(100);
+      }
     }
   };
 

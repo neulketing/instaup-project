@@ -7,9 +7,9 @@ const API_BASE_URL =
 
 export interface TestResult {
   endpoint: string;
-  status: "success" | "error";
-  responseTime: number;
-  data?: unknown;
+  status: "success" | "error" | "loading";
+  responseTime?: number;
+  data?: any;
   error?: string;
 }
 
@@ -17,7 +17,7 @@ class APITestService {
   private async testEndpoint(
     endpoint: string,
     method: "GET" | "POST" = "GET",
-    body?: Record<string, unknown>,
+    body?: any,
   ): Promise<TestResult> {
     const startTime = Date.now();
 
@@ -48,6 +48,18 @@ class APITestService {
       };
     } catch (error) {
       const responseTime = Date.now() - startTime;
+
+      // CORS 에러인 경우 특별 처리
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.warn('🚨 CORS 에러 발생 - Railway 재배포 필요');
+        return {
+          endpoint,
+          status: "error",
+          responseTime,
+          error: "CORS 에러: Railway에서 새로운 CORS 설정 배포 대기 중",
+        };
+      }
+
       return {
         endpoint,
         status: "error",
@@ -60,6 +72,16 @@ class APITestService {
   // 백엔드 헬스체크
   async testHealth(): Promise<TestResult> {
     return this.testEndpoint("/health");
+  }
+
+  // 백엔드 루트 엔드포인트
+  async testRoot(): Promise<TestResult> {
+    return this.testEndpoint("/");
+  }
+
+  // 버전 정보
+  async testVersion(): Promise<TestResult> {
+    return this.testEndpoint("/version");
   }
 
   // API 라우트들 테스트
@@ -88,26 +110,36 @@ class APITestService {
     totalTests: number;
     successCount: number;
     results: TestResult[];
+    corsStatus: string;
   }> {
     console.log("🚀 Starting full API test...");
 
     const results: TestResult[] = [];
 
-    // 기본 엔드포인트들 테스트
+    // 기본 엔드포인트들 테스트 (CORS 영향 받지 않는 것들)
+    results.push(await this.testRoot());
+    results.push(await this.testVersion());
     results.push(await this.testHealth());
 
-    // API 엔드포인트들 테스트
+    // API 엔드포인트들 테스트 (CORS 영향 받을 수 있음)
     const authResults = await this.testAuthEndpoints();
     const serviceResults = await this.testServiceEndpoints();
 
     results.push(...authResults, ...serviceResults);
 
     const successCount = results.filter((r) => r.status === "success").length;
+    const corsErrors = results.filter((r) => r.error?.includes("CORS")).length;
+
+    let corsStatus = "OK";
+    if (corsErrors > 0) {
+      corsStatus = `CORS 에러 ${corsErrors}개 - Railway 재배포 필요`;
+    }
 
     console.log("📊 Test Results:", {
       baseUrl: API_BASE_URL,
       totalTests: results.length,
       successCount,
+      corsStatus,
       results,
     });
 
@@ -116,6 +148,7 @@ class APITestService {
       totalTests: results.length,
       successCount,
       results,
+      corsStatus,
     };
   }
 
@@ -123,6 +156,8 @@ class APITestService {
   exposeToGlobal() {
     (window as typeof window & { testAPI: unknown }).testAPI = {
       health: () => this.testHealth(),
+      root: () => this.testRoot(),
+      version: () => this.testVersion(),
       auth: () => this.testAuthEndpoints(),
       services: () => this.testServiceEndpoints(),
       full: () => this.runFullTest(),
@@ -134,11 +169,13 @@ class APITestService {
     };
 
     console.log("🔧 API Test utilities exposed to window.testAPI");
-    console.log("Usage:");
-    console.log("  window.testAPI.health() - Test health endpoint");
-    console.log("  window.testAPI.full() - Run full test suite");
+    console.log("📋 사용법:");
+    console.log("  window.testAPI.health() - 헬스체크 테스트");
+    console.log("  window.testAPI.full() - 전체 테스트 실행");
+    console.log("  window.testAPI.root() - 루트 엔드포인트 테스트");
+    console.log("  window.testAPI.version() - 버전 정보 테스트");
     console.log(
-      '  window.testAPI.custom("/api/custom") - Test custom endpoint',
+      '  window.testAPI.custom("/custom") - 커스텀 엔드포인트 테스트',
     );
   }
 }
@@ -150,5 +187,3 @@ export const apiTestService = new APITestService();
 if (typeof window !== "undefined") {
   apiTestService.exposeToGlobal();
 }
-
-export default apiTestService;
