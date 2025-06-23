@@ -9,7 +9,7 @@ import DataExportPanel from "../components/DataExportPanel";
 import ProductManagement from "../components/ProductManagement";
 import RoleManagement from "../components/RoleManagement";
 import ServiceManagementModal from "../components/ServiceManagementModal";
-import { PermissionGuard, usePermissions } from "../hooks/usePermissions";
+// import { PermissionGuard, usePermissions } from "../hooks/usePermissions";
 import {
   type DashboardMetrics,
   type OrderData,

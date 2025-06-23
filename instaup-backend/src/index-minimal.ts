@@ -12,7 +12,12 @@ export const prisma = new PrismaClient()
 // Middleware
 app.use(helmet())
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "https://same-4001w3tt33q-latest.netlify.app",
+  origin: [
+    "http://localhost:5173",
+    "https://same-4001w3tt33q-latest.netlify.app",
+    "https://instaup.kr",
+    "https://instaup-clean.netlify.app"
+  ],
   credentials: true
 }))
 app.use(morgan('combined'))

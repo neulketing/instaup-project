@@ -1,6 +1,6 @@
 // 권한 관리 컴포넌트
 import { useState } from "react";
-import { usePermissions } from "../hooks/usePermissions";
+// import { usePermissions } from "../hooks/usePermissions";
 import {
   PERMISSIONS,
   type Permission,
